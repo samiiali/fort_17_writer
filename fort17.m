@@ -182,9 +182,11 @@ disp('ETA1 ETA2 ETA3 Written.');
 fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DUU2
 fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DVV2
 disp('DUU2 DVV2 Written.');
-fprintf(fid1, '%22.14E\n', ones(n_nodes,1)); % *** NODECODE
+fprintf(fid1, '%22.14E\n', dep_14(:,n_layer)>0); % *** NODECODE
 fprintf(fid1, '%22.14E\n', ones(n_cells,1)); %NOFF
-fprintf(fid1, '%22.14E\n', zeros(31,1));
+fprintf(fid1, '%10d\n', zeros(18,1));
+fprintf(fid1, '%10d\n', 4);
+fprintf(fid1, '%10d\n', zeros(12,1));
 fprintf(fid1, '%22.14E\n', zeros(3*n_nodes,1)); % DUU DUV DVV
 disp('DUU DUV DVV Written.');
 fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DUU2
