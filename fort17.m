@@ -11,15 +11,25 @@ close all
 iyear = 2017;
 iday = 113;
 ihour = 0;
-n_layer = 31;
-enable_plots = 0;
+n_layer = 11;
+enable_plots = 1;
 sigma = linspace(1, -1, n_layer)';
 if exist('sigma.txt','file') == 2
     sigma = dlmread('sigma.txt');
 end
-nodes_14 = dlmread('IO_Files/nodes_of_fort.14');
-cells_14 = dlmread('IO_Files/elems_of_fort.14','',0,2);
-fid1 = fopen('IO_Files/fort.17','w');
+
+fort_14_file = 'IO_Files/fort.14';
+fort_14_id = fopen(fort_14_file, 'r');
+fgetl(fort_14_id); % First line.
+ne_np = fscanf(fort_14_id, '%d %d', 2);
+ne = ne_np(1);
+np = ne_np(2);
+
+nodes_14 = fscanf(fort_14_id, '%lf', [4, np])';
+cells_14 = fscanf(fort_14_id, '%ld', [5, ne])';
+cells_14 = cells_14(:, 3:5);
+fclose(fort_14_id);
+fort_17_id = fopen('IO_Files/fort.17','w');
 %
 iyear_00 = sprintf('%d',iyear);
 ihour_00 = sprintf('%02d',ihour);
@@ -108,7 +118,7 @@ end
 %
 if (enable_plots)
     plot_2D_data('u', iday_00, ihour_00, hy_lon, hy_lat, ...
-        u_x_filled(:,:,2), cells_14, lon_14, lat_14, u_x_14(:,3));
+        u_x(:,:,1), cells_14, lon_14, lat_14, u_x_14(:,1));
 end
 %
 %clear u_x u_x_filled u_x_14
@@ -128,7 +138,7 @@ end
 %
 if (enable_plots)
     plot_2D_data('v', iday_00, ihour_00, hy_lon, hy_lat, ...
-        u_y_filled(:,:,2), cells_14, lon_14, lat_14, u_y_14(:,3));
+        u_y(:,:,1), cells_14, lon_14, lat_14, u_y_14(:,1));
 end
 %
 %clear u_y u_y_filled u_y_14
@@ -148,7 +158,7 @@ end
 %
 if (enable_plots)
     plot_2D_data('salinity', iday_00, ihour_00, hy_lon, hy_lat, ...
-        salin_filled(:,:,2), cells_14, lon_14, lat_14, salin_14(:,3));
+        salin(:,:,1), cells_14, lon_14, lat_14, salin_14(:,1), [0, 30]);
 end
 %clear salin salin_filled salin_14
 
@@ -162,49 +172,50 @@ temp_filled = fill_3D_nan_vals(hy_lon, hy_lat, hy_dep, temp);
 temp_14 = zeros(n_nodes, n_layer);
 for i_dep = 1:n_layer
     temp_14(:,i_dep) = interp3(lon_mat_3D, lat_mat_3D, dep_mat_3D, ...
-        temp_filled, lon_14, lat_14, dep_14(:,i_dep));
+        temp_filled, lon_14, lat_14, dep_14(:,i_dep), 'linear');
 end
 %
 if (enable_plots)
     plot_2D_data('temp', iday_00, ihour_00, hy_lon, hy_lat, ...
-        temp_filled(:,:,2), cells_14, lon_14, lat_14, temp_14(:,3));
+        temp(:,:,1), ...
+        cells_14, lon_14, lat_14, temp_14(:,1));
 end
 %clear temp temp_filled temp_14
 
 %
 % Finally, we write the output to file
 %
-fprintf(fid1, 'This file is written based on HYCOM output.\n');
-fprintf(fid1, '%12d\n%12E\n%12d\n%12d\n%12d\n%12d\n%12d\n', ...
+fprintf(fort_17_id, 'This file is written based on HYCOM output.\n');
+fprintf(fort_17_id, '%12d\n%12E\n%12d\n%12d\n%12d\n%12d\n%12d\n', ...
     21, 0., 0, n_nodes, n_cells, n_nodes, n_cells);
-fprintf(fid1, '%22.14E\n', zeros(3*n_nodes,1)); %ETA1 ETA2 ETA3
+fprintf(fort_17_id, '%22.14E\n', zeros(3*n_nodes,1)); %ETA1 ETA2 ETA3
 disp('ETA1 ETA2 ETA3 Written.');
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DUU2
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DVV2
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % DUU2
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % DVV2
 disp('DUU2 DVV2 Written.');
-fprintf(fid1, '%22.14E\n', dep_14(:,n_layer)>0); % *** NODECODE
-fprintf(fid1, '%22.14E\n', ones(n_cells,1)); %NOFF
-fprintf(fid1, '%10d\n', zeros(18,1));
-fprintf(fid1, '%10d\n', 4);
-fprintf(fid1, '%10d\n', zeros(12,1));
-fprintf(fid1, '%22.14E\n', zeros(3*n_nodes,1)); % DUU DUV DVV
+fprintf(fort_17_id, '%22.14E\n', dep_14(:,n_layer)>0); % *** NODECODE
+fprintf(fort_17_id, '%22.14E\n', ones(n_cells,1)); %NOFF
+fprintf(fort_17_id, '%10d\n', zeros(18,1));
+fprintf(fort_17_id, '%10d\n', 4);
+fprintf(fort_17_id, '%10d\n', zeros(12,1));
+fprintf(fort_17_id, '%22.14E\n', zeros(3*n_nodes,1)); % DUU DUV DVV
 disp('DUU DUV DVV Written.');
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DUU2
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % DVV2
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % DUU2
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % DVV2
 disp('DUU2 DVV2 Written.');
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % BSX
-fprintf(fid1, '%22.14E\n', zeros(n_nodes,1)); % BSY
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % BSX
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes,1)); % BSY
 disp('BSX BSY Written.');
-fprintf(fid1, '%22.14E\n', zeros(n_nodes*n_layer,1)); % U
-fprintf(fid1, '%22.14E\n', zeros(n_nodes*n_layer,1)); % V
-fprintf(fid1, '%22.14E\n', zeros(n_nodes*n_layer,1)); % WZ
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes*n_layer,1)); % U
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes*n_layer,1)); % V
+fprintf(fort_17_id, '%22.14E\n', zeros(n_nodes*n_layer,1)); % WZ
 disp('U V WZ Written.');
-fprintf(fid1, '%22.14E\n', 1.e-6*ones(n_nodes*n_layer,1)); % Q2
-fprintf(fid1, '%22.14E\n', ones(n_nodes*n_layer,1)); % L
+fprintf(fort_17_id, '%22.14E\n', 1.e-6*ones(n_nodes*n_layer,1)); % Q2
+fprintf(fort_17_id, '%22.14E\n', ones(n_nodes*n_layer,1)); % L
 disp('Q2 L Written.');
-fprintf(fid1, '%22.14E\n', flipud(salin_14)'); % Sal
-fprintf(fid1, '%22.14E\n', flipud(temp_14)'); % Tem
+fprintf(fort_17_id, '%22.14E\n', flipud(salin_14)'); % Sal
+fprintf(fort_17_id, '%22.14E\n', flipud(temp_14)'); % Tem
 disp('Salinity Temperature Written.');
-fclose(fid1);
+fclose(fort_17_id);
 
 fclose('all');

@@ -7,38 +7,18 @@ function [out_var] = fill_2D_nan_vals(hy_lon, hy_lat, out_var)
 
 [num_lat, num_lon] = size(out_var);
 
-fuse1 = 0;
+lon_mat_2D = repmat(hy_lon', num_lat, 1);
+lat_mat_2D = repmat(hy_lat,  1, num_lon);
 
-for i_lat = 1:num_lat
-    var_is_nan_row = find(isnan(out_var(i_lat, :)));
-    var_no_nan_row = find(~isnan(out_var(i_lat, :)));
-    if (size(var_no_nan_row,2) >= 1)
-        out_var(i_lat, var_is_nan_row) = ...
-            interp1(hy_lon(var_no_nan_row), ...
-            out_var(i_lat,var_no_nan_row), ...
-            hy_lon(var_is_nan_row),'nearest','extrap');
-    else
-        fuse1 = 1;
-    end
-end
+var_no_nan = double(out_var(~isnan(out_var)));
+lon_no_nan = double(lon_mat_2D(~isnan(out_var)));
+lat_no_nan = double(lat_mat_2D(~isnan(out_var)));
 
-if (fuse1)
-    for i_lon = 1:num_lon
-        var_is_nan_col = find(isnan(out_var(:, i_lon)));
-        var_no_nan_col = find(~isnan(out_var(:, i_lon)));
-        if (size(var_no_nan_col,1) >= 1)
-            out_var(var_is_nan_col,i_lon) = ...
-                interp1(hy_lat(var_no_nan_col), ...
-                out_var(var_no_nan_col,i_lon), ...
-                hy_lat(var_is_nan_col),'nearest','extrap');
-        else
-            disp(['There is missed data issue,',...
-                'but ... still if you are lucky, ',...
-                'it will not affect you']);
-        end
-    end
-end
-
+var_interpolant = scatteredInterpolant(...
+    lon_no_nan, lat_no_nan, ...
+    var_no_nan, 'linear', 'nearest');
+    
+out_var = var_interpolant(double(lon_mat_2D), double(lat_mat_2D));
 
 end
 
